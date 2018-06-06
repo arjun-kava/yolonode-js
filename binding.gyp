@@ -6,6 +6,8 @@
         {
             "target_name": "yolonodejs",
             "sources": [
+                #"bindings/yolo/yolonodejs_image.cc",
+                "bindings/yolo/yolonodejs_image.h",
                 "bindings/yolonodejs.cc",
             ],
             'include_dirs': [
@@ -22,6 +24,10 @@
             ],
             "cflags" : [
     			"-std=c++11",
+                "-Wall",
+                "-Wfatal-errors",
+                "-fPIC",
+                "-Ofast"
             ],
             "cflags!" : [
                 "-fno-exceptions",

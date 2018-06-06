@@ -6,29 +6,34 @@ const cvNodeJsBuild = require( isCPU() ? 'opencvnode-js-build' : 'opencvnode-js-
 // dirs to include
 const includeDirs = [
     yoloNodeJsBuild.yoloInclude,
+    yoloNodeJsBuild.yoloIncludeSrc,
     cvNodeJsBuild.opencvInclude,
     cvNodeJsBuild.opencvIncludeCC,
 ]
 // dirs of libraries
 const libDirs = [
     yoloNodeJsBuild.yoloLibDir,
-    cvNodeJsBuild.opencvLibDir
+    cvNodeJsBuild.opencvLibDir,
+    yoloNodeJsBuild.yoloBuildDir
 ]
 
 /**
  * @description: fetching needed include directories for binding
  */
 const getIncludeDirs = () => {
-    console.log(includeDirs.join(","));
+    console.log(includeDirs.join(" "));
 }
 
 /**
  * @description: fetching needed libraries for bindings
  */
 const getLibraries = () => {
+    const common = ["m",
+    "pthread",
+    "stdc++"]
     const yoloModules = yoloNodeJsBuild.yoloModules ? yoloNodeJsBuild.yoloModules: [];
     const cvModules = cvNodeJsBuild.libs ? cvNodeJsBuild.libs: [];
-    let libraries = (yoloModules).concat(cvModules);
+    let libraries = (common).concat(yoloModules)//.concat(cvModules);
     libraries = libraries.map(lib => console.log(`-l${lib}`));
     console.log(libraries.join(" "))
 }

@@ -18,11 +18,33 @@ inline bool IsConstructor(napi_env env, napi_callback_info info,
                           const char* file, const size_t lineNumber) {
   napi_value target;
   NAPI_CALL(env, napi_get_new_target(env, info, &target));
-  bool is_target = target != nullptr;
+  bool is_target = target != NULL;
   if (!is_target) {
       NAPI_THROW_ERROR(env, "Invalid Constructor Call!")
   }
   return is_target;
+}
+
+#define IS_VALID_NUM_ARG(env, argc, numOfArg) \
+  if (!IsValidNumberOfArg(env, argc, numOfArg, __FILE__, __LINE__)) return true;
+
+#define IS_VALID_NUM_RETVAL(env, argc, numOfArg, retval) \
+  if (!IsValidNumberOfArg(env, argc, numOfArg, __FILE__, __LINE__)) return retval;
+
+/**
+* @desc: check valid number of argument
+* @param argc: <size_t>
+* @params numOfArg
+**/
+inline bool IsValidNumberOfArg(napi_env env, size_t* argc, int numOfArg,
+                                  const char* file, const size_t lineNumber){
+  if(*argc >= numOfArg || *argc < 0){
+    NAPI_THROW_ERROR(env, "Invalid Number of arguments!");
+  }
+  else 
+  {
+    return true;
+  }
 }
 
 #define IS_NUMBER(env, value) \

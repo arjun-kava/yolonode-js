@@ -39,7 +39,7 @@ inline void Log(const char *message, const char *file,
 inline void ThrowError(napi_env env, const char *message, const char *file,
                        const size_t line_number) {
   Log(message, file, line_number);
-  napi_throw_error(env, nullptr, message);
+  napi_throw_error(env, NULL, message);
 }
 /**
  * get last thrown error and rethrow
