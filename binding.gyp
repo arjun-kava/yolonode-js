@@ -9,8 +9,6 @@
             ],
             "target_name": "yolonodejs",
             "sources": [
-                #"bindings/yolo/yolonodejs_image.cc",
-                "bindings/yolo/yolonodejs_image.h",
                 "bindings/yolonodejs.cc",
             ],
             'include_dirs': [
@@ -34,12 +32,12 @@
             ],
             "cflags!" : [
                 "-fno-exceptions",
-                "-fno-conversion-null"  
+                "-fno-conversion-null"
             ],
             "cflags_cc!": [
                 "-fno-rtti",
                 "-fno-exceptions",
-                "-Wno-ignored-qualifiers"            
+                "-Wno-ignored-qualifiers"
             ],
             "configurations": {
                 "Debug": {
