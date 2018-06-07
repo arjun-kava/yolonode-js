@@ -2,7 +2,7 @@
 #define CAFFE_NODEJS_UTIL_VALIDATE_H_
 
 #include <node_api.h>
-#include "status.h"
+#include "debug.h"
 
 
 #define IS_CONSTRUCTOR(env, info) \
@@ -28,7 +28,7 @@ inline bool IsConstructor(napi_env env, napi_callback_info info,
 #define IS_VALID_NUM_ARG(env, argc, numOfArg) \
   if (!IsValidNumberOfArg(env, argc, numOfArg, __FILE__, __LINE__)) return true;
 
-#define IS_VALID_NUM_RETVAL(env, argc, numOfArg, retval) \
+#define IS_VALID_NUM_ARG_RETVAL(env, argc, numOfArg, retval) \
   if (!IsValidNumberOfArg(env, argc, numOfArg, __FILE__, __LINE__)) return retval;
 
 /**
@@ -38,8 +38,9 @@ inline bool IsConstructor(napi_env env, napi_callback_info info,
 **/
 inline bool IsValidNumberOfArg(napi_env env, size_t* argc, int numOfArg,
                                   const char* file, const size_t lineNumber){
-  if(*argc >= numOfArg || *argc < 0){
+  if(*argc == 0 || *argc >= numOfArg){
     NAPI_THROW_ERROR(env, "Invalid Number of arguments!");
+    return false;
   }
   else 
   {
@@ -47,15 +48,17 @@ inline bool IsValidNumberOfArg(napi_env env, size_t* argc, int numOfArg,
   }
 }
 
-#define IS_NUMBER(env, value) \
-    if(!IsNum(env, value, __FILE__, __LINE__)) return;
 
+/**
+ * @description: validate valid number
+ * @param env
+ * @param value
+ ***/
+ #define IS_NUMBER(env, value) \
+    if(!IsNum(env, value, __FILE__, __LINE__)) return;
 #define IS_NUMBER_RETVALUE(env, value, retvalue) \
     if(!IsNum(env, value, __FILE__, __LINE__)) return retvalue;
 
-/**
- * @desc: validate valid number
- ***/
 inline bool IsNum(napi_env env, napi_value value,
                                 const char* file, const size_t lineNumber){
   napi_valuetype type;
@@ -65,6 +68,44 @@ inline bool IsNum(napi_env env, napi_value value,
     NAPI_THROW_ERROR(env, "Invalid Number!");
   }
   return is_number;
+}
+
+/**
+* check whether argument is array
+* @param env: <napi_env>
+* @param array: <napi_value>
+*/
+#define IS_ARRAY(env, array) \
+    if(!IsArray(env, array)) return;
+#define IS_ARRAY_RETVALUE(env, array, retvalue) \
+    if(!IsArray(env, array)) return retvalue;
+inline bool IsArray(napi_env env, napi_value array){
+  napi_valuetype type;
+  NAPI_CALL(env, napi_typeof(env, array, &type));
+  if(type != napi_object){
+    NAPI_THROW_ERROR(env, "Wrong type of arguments. Expect Array!");
+    return false;
+  }
+  return true;
+}
+
+/**
+* @description: validate argument as object
+* @parma env: <napi_env>
+* @parma object: <napi_value>
+*/
+#define IS_OBJECT(env, array) \
+    if(!IsArray(env, array)) return;
+#define IS_OBJECT_RETVALUE(env, array, retvalue) \
+    if(!IsArray(env, array)) return retvalue;
+inline bool IsObject(napi_env env, napi_value* object){
+  napi_valuetype type;
+  NAPI_CALL(env, napi_typeof(env, *object, &type));
+  if(type != napi_object){
+    NAPI_THROW_ERROR(env, "Wrong type of arguments. Expect Object!");
+    return false;
+  }
+  return true;
 }
 
 #endif  // CAFFE_NODEJS_UTIL_VALIDATE_H_
