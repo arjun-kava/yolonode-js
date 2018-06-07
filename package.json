@@ -1,0 +1,40 @@
+{
+    "name": "yolonode-js",
+    "version": "0.0.1",
+    "description": "build for darknet yolo",
+    "main": "lib/yolonode.js",
+    "gypfile": true,
+    "scripts": {
+        "install": "node-gyp rebuild",
+        "configure": "node-gyp configure",
+        "build": "node-gyp configure build",
+        "rebuild": "node-gyp rebuild",
+        "clean": "node-gyp clean",
+        "build-debug": "node-gyp rebuild --debug",
+        "test": "mocha --recursive ./src/test"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/zujoio/yolonode-js.git"
+    },
+    "keywords": [
+        "yolo",
+        "darkent",
+        "node js"
+    ],
+    "author": "arjun-kava",
+    "license": "Apache 2.0",
+    "bugs": {
+        "url": "https://github.com/zujoio/yolonode-js/issues"
+    },
+    "homepage": "https://github.com/zujoio/yolonode-js#readme",
+    "dependencies": {
+        "bindings": "^1.3.0",
+        "yolonode-js-build": "0.0.4",
+        "npmlog": "^4.1.2"
+    },
+    "devDependencies": {
+        "chai": "^4.1.2",
+        "mocha": "^5.1.1"
+    }
+}
