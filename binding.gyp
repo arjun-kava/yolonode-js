@@ -4,6 +4,9 @@
     },
     "targets": [
         {
+            "defines":[
+                "__cplusplus=1"
+            ],
             "target_name": "yolonodejs",
             "sources": [
                 #"bindings/yolo/yolonodejs_image.cc",

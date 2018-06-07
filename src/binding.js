@@ -1,19 +1,15 @@
 const path = require('path');
 const { isCPU } = require('./native');
 const yoloNodeJsBuild = require( isCPU() ? 'yolonode-js-build' : 'yolonode-js-build-gpu');
-const cvNodeJsBuild = require( isCPU() ? 'opencvnode-js-build' : 'opencvnode-js-build-gpu');
 
 // dirs to include
 const includeDirs = [
     yoloNodeJsBuild.yoloInclude,
-    yoloNodeJsBuild.yoloIncludeSrc,
-    cvNodeJsBuild.opencvInclude,
-    cvNodeJsBuild.opencvIncludeCC,
+    yoloNodeJsBuild.yoloIncludeSrc
 ]
 // dirs of libraries
 const libDirs = [
     yoloNodeJsBuild.yoloLibDir,
-    cvNodeJsBuild.opencvLibDir,
     yoloNodeJsBuild.yoloBuildDir
 ]
 
@@ -28,13 +24,8 @@ const getIncludeDirs = () => {
  * @description: fetching needed libraries for bindings
  */
 const getLibraries = () => {
-    const common = ["m",
-    "pthread",
-    "stdc++"]
-    const yoloModules = yoloNodeJsBuild.yoloModules ? yoloNodeJsBuild.yoloModules: [];
-    const cvModules = cvNodeJsBuild.libs ? cvNodeJsBuild.libs: [];
-    let libraries = (common).concat(yoloModules)//.concat(cvModules);
-    libraries = libraries.map(lib => console.log(`-l${lib}`));
+    const yoloModules = yoloNodeJsBuild.libs ? yoloNodeJsBuild.libs: [];
+    const libraries = yoloModules.map(lib => console.log(`-l${lib}`));
     console.log(libraries.join(" "))
 }
 
