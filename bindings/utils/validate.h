@@ -54,20 +54,25 @@ inline bool IsValidNumberOfArg(napi_env env, size_t* argc, int numOfArg,
  * @param env
  * @param value
  ***/
- #define IS_NUMBER(env, value) \
-    if(!IsNum(env, value, __FILE__, __LINE__)) return;
+ #define IS_NUMBER(env, value) IsNum(env, value);
 #define IS_NUMBER_RETVALUE(env, value, retvalue) \
-    if(!IsNum(env, value, __FILE__, __LINE__)) return retvalue;
-
-inline bool IsNum(napi_env env, napi_value value,
-                                const char* file, const size_t lineNumber){
+    IsNum(env, value); \
+    return retvalue;
+inline bool IsNum(napi_env env, napi_value* value){
   napi_valuetype type;
-  NAPI_CALL(env, napi_typeof(env, value, &type));
-  bool is_number = type == napi_number;
-  if(!is_number){
-    NAPI_THROW_ERROR(env, "Invalid Number!");
+  if(*value){
+    NAPI_CALL(env, napi_typeof(env, *value, &type));
+    bool is_number = type == napi_number;
+    if(!is_number){
+      NAPI_THROW_ERROR(env, "Invalid Number!");
+      return false;
+    }
+    return is_number;
   }
-  return is_number;
+  else{
+      NAPI_THROW_ERROR(env, "Invalid Number!");
+      return false;
+  }
 }
 
 /**
@@ -94,10 +99,10 @@ inline bool IsArray(napi_env env, napi_value array){
 * @parma env: <napi_env>
 * @parma object: <napi_value>
 */
-#define IS_OBJECT(env, array) \
-    if(!IsArray(env, array)) return;
-#define IS_OBJECT_RETVALUE(env, array, retvalue) \
-    if(!IsArray(env, array)) return retvalue;
+#define IS_OBJECT(env, object) IsObject(env, object);;
+#define IS_OBJECT_RETVALUE(env, object, retvalue) \
+    IsObject(env, object) \
+    return retvalue;
 inline bool IsObject(napi_env env, napi_value* object){
   napi_valuetype type;
   NAPI_CALL(env, napi_typeof(env, *object, &type));
@@ -107,5 +112,6 @@ inline bool IsObject(napi_env env, napi_value* object){
   }
   return true;
 }
+
 
 #endif  // CAFFE_NODEJS_UTIL_VALIDATE_H_
