@@ -12,6 +12,10 @@
 * @param fn
 * @param name
 **/
+#define BIND_NAPI_FUN(env, exports, fn, name) BindNapiFunction(env, exports, fn, name);
+#define BIND_NAPI_FUN_RETVAL(env, exports, fn, name, retval) \
+  BindNapiFunction(env, exports, fn, name) \
+  return retval;
 inline bool BindNapiFunction(napi_env env,napi_value exports,napi_callback fn,const char* name){
     napi_value fnRef;
     NAPI_CALL(env, napi_create_function(env, NULL, NAPI_AUTO_LENGTH, fn, NULL, &fnRef));
@@ -39,6 +43,9 @@ static napi_value FloatArrayToNapi(napi_env env,float* source, napi_value* targe
     }
     return *target;
 }
+
+
+
 
 #endif // CAFFE_NODEJS_UTIL_HELPER_H_
 

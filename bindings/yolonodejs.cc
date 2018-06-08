@@ -11,13 +11,14 @@
 napi_value Init(napi_env env, napi_value exports) {
 
   /////// UTILS
-  BindNapiFunction(env, exports, yolo_what_time_is_it_now, "what_time_is_it_now");
+  BIND_NAPI_FUN(env, exports, yolo_what_time_is_it_now, "what_time_is_it_now");
 
   ////// MATRIX
-  BindNapiFunction(env, exports, yolo_make_matrix, "make_matrix");
+  BIND_NAPI_FUN(env, exports, yolo_matrix_topk_accuracy, "matrix_topk_accuracy");
+  BIND_NAPI_FUN(env, exports, yolo_make_matrix, "make_matrix");
 
   ////// IMAGE
-  BindNapiFunction(env, exports, yolo_get_color, "get_color");
+  BIND_NAPI_FUN(env, exports, yolo_get_color, "get_color");
 
   return exports;
 }
