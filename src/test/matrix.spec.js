@@ -92,5 +92,31 @@ describe('Matrix', () => {
         expect(col).to.not.eq(undefined);
     })
 
+    it('should convert to csv', () => {
+        let rows = 0;
+        let cols = 0;
+        let mat = yoloNodeJs.make_matrix(rows,cols);
+        yoloNodeJs.matrix_to_csv(mat);
+    })
+
+    it('should read from csv', () => {
+        const csvPath = path.resolve(__dirname + "/../data/mat.csv");
+        let csvMat =yoloNodeJs.csv_to_matrix(csvPath);
+        expect(csvMat).to.not.eq(undefined);
+        expect(csvMat.rows).to.not.eq(undefined);
+        expect(csvMat.rows).to.eq(3);
+        expect(csvMat.cols).to.not.eq(undefined);
+        expect(csvMat.cols).to.eq(46);
+        expect(csvMat.vals).to.not.eq(undefined);
+        expect(csvMat.vals.length).to.eq(3);
+    })
+
+    it('should print matrix values', () => {
+        let rows = 0;
+        let cols = 0;
+        let source = yoloNodeJs.make_matrix(rows,cols);
+        yoloNodeJs.print_matrix(source);
+    })
+
 
 })

@@ -76,6 +76,32 @@ inline bool IsNum(napi_env env, napi_value* value){
 }
 
 /**
+ * @description: validate valid string path
+ * @param env
+ * @param value
+ ***/
+#define IS_STRING(env, value) IsString(env, value);
+#define IS_STRING_RETVALUE(env, value, retvalue) \
+    IsString(env, value); \
+    return retvalue;
+inline bool IsString(napi_env env, napi_value* value){
+  napi_valuetype type;
+  if(*value){
+    NAPI_CALL(env, napi_typeof(env, *value, &type));
+    bool is_string = type == napi_string;
+    if(!is_string){
+      NAPI_THROW_ERROR(env, "Invalid String!");
+      return false;
+    }
+    return is_string;
+  }
+  else{
+      NAPI_THROW_ERROR(env, "Invalid String!");
+      return false;
+  }
+}
+
+/**
 * check whether argument is array
 * @param env: <napi_env>
 * @param array: <napi_value>

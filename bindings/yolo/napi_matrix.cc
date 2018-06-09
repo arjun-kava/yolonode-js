@@ -167,7 +167,7 @@ static napi_value yolo_matrix_add_matrix(napi_env env, napi_callback_info info){
 * @param m: <matrix>
 */
 static napi_value yolo_copy_matrix(napi_env env, napi_callback_info info){
- size_t argc;
+    size_t argc;
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
 
     napi_value args[argc];
@@ -184,7 +184,7 @@ static napi_value yolo_copy_matrix(napi_env env, napi_callback_info info){
     matrix copy = copy_matrix(m);
 
     napi_value napi_copy;
-    MATRIX_TO_OBJ(env, &copy, &napi_copy);
+    MATRIX_TO_NAPI(env, &copy, &napi_copy);
 
     return napi_copy;
 }
@@ -243,7 +243,7 @@ static napi_value yolo_hold_out_matrix(napi_env env, napi_callback_info info){
     NAPI_TO_INT(env,&args[indexN], &n);
     matrix hold = hold_out_matrix(&m, n);
     napi_value napi_hold;
-    MATRIX_TO_OBJ(env, &hold, &napi_hold);
+    MATRIX_TO_NAPI(env, &hold, &napi_hold);
     
     return napi_hold;
 }
@@ -252,9 +252,10 @@ static napi_value yolo_hold_out_matrix(napi_env env, napi_callback_info info){
 * @description: pop columns
 * @param m: <matrix>
 * @param c: <int>
+* @return col: <float>
 */
 static napi_value yolo_pop_column(napi_env env, napi_callback_info info){
-size_t argc;
+    size_t argc;
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
 
     napi_value args[argc];
@@ -279,6 +280,84 @@ size_t argc;
     FLOAT_TO_NAPI(env, col, &napi_col);
     
     return napi_col;
+}
+
+/**
+* @description: convert csv to matrix
+* @param path: <string>
+*/
+static napi_value yolo_csv_to_matrix(napi_env env, napi_callback_info info){
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    napi_value args[argc];
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, NULL, NULL));
+   
+    IS_VALID_NUM_ARG_RETVAL(env, &argc, 2, NULL);
+
+    int indexPath = 0;
+    IS_STRING(env, &args[indexPath]);
+
+    size_t length;
+    GET_NAPI_STRING_LEN(env, &args[indexPath], &length);
+    char* path = new char[length];
+    NAPI_TO_CHAR(env,&args[indexPath], path, &length);
+
+    matrix mat = csv_to_matrix(path);
+
+    napi_value napi_mat;
+    MATRIX_TO_NAPI(env, &mat, &napi_mat);
+    free_matrix(mat);
+    return napi_mat;
+}
+
+/**
+* @description: convert matrix to csv
+* @params m: <matrix>
+* @params path: <string>
+*/
+static napi_value yolo_matrix_to_csv(napi_env env, napi_callback_info info){
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    napi_value args[argc];
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, NULL, NULL));
+   
+    IS_VALID_NUM_ARG_RETVAL(env, &argc, 2, NULL);
+
+    int indexM = 0;
+    IS_OBJECT(env, &args[indexM]);
+
+    matrix m;
+    NAPI_TO_MATRIX(env, &args[indexM],&m)
+
+    matrix_to_csv(m);
+    free_matrix(m);
+    return NULL;
+}
+
+/**
+* @description: print matrix
+* @param m: <matrix>
+*/
+static napi_value yolo_print_matrix(napi_env env, napi_callback_info info){
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    napi_value args[argc];
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, NULL, NULL));
+   
+    IS_VALID_NUM_ARG_RETVAL(env, &argc, 2, NULL);
+
+    int indexM = 0;
+    IS_OBJECT(env, &args[indexM]);
+
+    matrix m;
+    NAPI_TO_MATRIX(env, &args[indexM],&m)
+
+    print_matrix(m);
+    free_matrix(m);
+    return NULL;
 }
 
 #endif //YOLONODEJS_MATRIX_H

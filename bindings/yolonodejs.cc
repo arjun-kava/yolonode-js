@@ -22,6 +22,9 @@ napi_value Init(napi_env env, napi_value exports) {
   BIND_NAPI_FUN(env, exports, yolo_make_matrix, "make_matrix");
   BIND_NAPI_FUN(env, exports, yolo_hold_out_matrix, "hold_out_matrix");
   BIND_NAPI_FUN(env, exports, yolo_pop_column, "pop_column");
+  BIND_NAPI_FUN(env, exports, yolo_matrix_to_csv, "matrix_to_csv");
+  BIND_NAPI_FUN(env, exports, yolo_csv_to_matrix, "csv_to_matrix");
+  BIND_NAPI_FUN(env, exports, yolo_print_matrix, "print_matrix");
 
   ////// IMAGE
   BIND_NAPI_FUN(env, exports, yolo_get_color, "get_color");
