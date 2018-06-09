@@ -66,7 +66,7 @@ static napi_value yolo_scale_matrix(napi_env env, napi_callback_info info){
     napi_value args[argc];
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, NULL, NULL));
    
-    IS_VALID_NUM_ARG_RETVAL(env, &argc, 2, NULL);
+    IS_VALID_NUM_ARG_RETVAL(env, &argc, 3, NULL);
 
     int indexM = 0;
     int indexScale = 1;
@@ -74,14 +74,119 @@ static napi_value yolo_scale_matrix(napi_env env, napi_callback_info info){
     IS_NUMBER(env, &args[indexScale]);
 
     matrix m;
-    NAPI_TO_MATRIX(env, &args[indexTruth], &m);
+    NAPI_TO_MATRIX(env, &args[indexM],&m)
 
     float scale;
     NAPI_TO_FLOAT(env,&args[indexScale], &scale);
 
+    scale_matrix(m, scale);
+
+    napi_value vals;
+    FLOAT_MARRAY_TO_NAPI(env, m.vals, &m.rows, &m.cols, &vals);
+
+    SET_PROPERTY(env, &args[indexM],"vals", &vals);
     
+    return NULL;
+}
+
+/**
+* @description: resize matrix
+* @param m: <matrix>
+* @param size: <int>
+*/
+static napi_value yolo_resize_matrix(napi_env env, napi_callback_info info){
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    napi_value args[argc];
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, NULL, NULL));
+   
+    IS_VALID_NUM_ARG_RETVAL(env, &argc, 3, NULL);
+
+    int indexM = 0;
+    int indexSize = 1;
+    IS_OBJECT(env, &args[indexM]);
+    IS_NUMBER(env, &args[indexSize]);
+
+    matrix m;
+    NAPI_TO_MATRIX(env, &args[indexM],&m)
+
+    int size;
+    NAPI_TO_INT(env,&args[indexSize], &size);
+
+    m = resize_matrix(m, size);
+
+    napi_value vals;
+    FLOAT_MARRAY_TO_NAPI(env, m.vals, &m.rows, &m.cols, &vals);
+
+    SET_PROPERTY(env, &args[indexM],"vals", &vals);
+    SET_PROPERTY(env, &args[indexM],"rows", &args[indexSize]);
+
+    return args[indexM];
+}
+
+/**
+* @description: add new matrix
+* @param from: <matrix>
+* @param to: <matrix>
+*/
+static napi_value yolo_matrix_add_matrix(napi_env env, napi_callback_info info){
+  size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    napi_value args[argc];
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, NULL, NULL));
+   
+    IS_VALID_NUM_ARG_RETVAL(env, &argc, 3, NULL);
+
+    int indexFrom = 0;
+    int indexTo = 1;
+    IS_OBJECT(env, &args[indexFrom]);
+    IS_OBJECT(env, &args[indexTo]);
+
+    matrix from;
+    NAPI_TO_MATRIX(env, &args[indexFrom],&from);
+    matrix to;
+    NAPI_TO_MATRIX(env, &args[indexTo],&to);
+
+    bool isBothMatSame = ( from.rows == to.rows && from.cols == to.cols );
+    NAPI_ASSERT(env, isBothMatSame,"Both array needs to have same size!");
+
+    matrix_add_matrix(from, to);
+
+    napi_value vals;
+    FLOAT_MARRAY_TO_NAPI(env, from.vals, &from.rows, &from.cols, &vals);
+
+    SET_PROPERTY(env, &args[indexFrom],"vals", &vals);
 
     return NULL;
+}
+
+/**
+* @description 
+* @param m: <matrix>
+*/
+static napi_value yolo_copy_matrix(napi_env env, napi_callback_info info){
+ size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    napi_value args[argc];
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, NULL, NULL));
+   
+    IS_VALID_NUM_ARG_RETVAL(env, &argc, 2, NULL);
+
+    int indexM = 0;
+    IS_OBJECT(env, &args[indexM]);
+
+    matrix m;
+    NAPI_TO_MATRIX(env, &args[indexM],&m)
+
+    matrix copy = copy_matrix(m);
+
+    napi_value napi_copy;
+    MATRIX_TO_OBJ(env, &copy, &napi_copy);
+
+    return napi_copy;
 }
 
 /**
@@ -112,6 +217,68 @@ static napi_value yolo_make_matrix(napi_env env, napi_callback_info info){
     CREATE_MATRIX_RETVAL(env, &rows, &cols, &result, NULL);
 
     return  result;
+}
+
+/**
+* @description: hold out matrix
+* @param m: <matrix>
+* @param n: <n>
+*/
+static napi_value yolo_hold_out_matrix(napi_env env, napi_callback_info info){
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    napi_value args[argc];
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, NULL, NULL));
+   
+    IS_VALID_NUM_ARG_RETVAL(env, &argc, 3, NULL);
+
+    int indexM = 0;
+    int indexN = 1;
+    IS_OBJECT(env, &args[indexM]);
+    IS_NUMBER(env, &args[indexN]);
+    matrix m;
+    NAPI_TO_MATRIX(env, &args[indexM],&m)
+    int n;
+    NAPI_TO_INT(env,&args[indexN], &n);
+    matrix hold = hold_out_matrix(&m, n);
+    napi_value napi_hold;
+    MATRIX_TO_OBJ(env, &hold, &napi_hold);
+    
+    return napi_hold;
+}
+
+/**
+* @description: pop columns
+* @param m: <matrix>
+* @param c: <int>
+*/
+static napi_value yolo_pop_column(napi_env env, napi_callback_info info){
+size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    napi_value args[argc];
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, NULL, NULL));
+   
+    IS_VALID_NUM_ARG_RETVAL(env, &argc, 3, NULL);
+
+    int indexM = 0;
+    int indexC = 1;
+    IS_OBJECT(env, &args[indexM]);
+    IS_NUMBER(env, &args[indexC]);
+
+    matrix m;
+    NAPI_TO_MATRIX(env, &args[indexM],&m)
+
+    int c;
+    NAPI_TO_INT(env,&args[indexC], &c);
+
+    float* col = pop_column(&m, c);
+
+    napi_value napi_col;
+    FLOAT_TO_NAPI(env, col, &napi_col);
+    
+    return napi_col;
 }
 
 #endif //YOLONODEJS_MATRIX_H

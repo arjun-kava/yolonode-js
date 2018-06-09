@@ -43,6 +43,25 @@ inline static bool HasProperty(napi_env env,napi_value* object, napi_value* key)
     }
 }
 
+#define SET_PROPERTY(env, object, key, result) SetProperty(env, object, key, result);
+#define SET_PROPERTY_RETVAL(env, object, key, result, retval) \
+  SetProperty(env, object, key, result) \
+  return retval;
+static napi_value SetProperty(napi_env env, napi_value* object,const char* key, napi_value* result){
+    napi_value target_key;
+    CHAR_TO_NAPI(env, key, &target_key);
+    bool has_property = HAS_PROPERTY(env, object, &target_key);
+    if(has_property){
+      NAPI_CALL(env, napi_set_property(env, *object, target_key, *result));
+      return *result;
+    }
+    else 
+    {
+      NAPI_THROW_ERROR(env, "Accessing Invalid Property!");
+      return *result;
+    }
+}
+
 
 
 
