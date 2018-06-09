@@ -15,11 +15,11 @@ using namespace std;
 * @param mat: <*matrix>
 * @param object: <*napi_value>
 */
-#define MATRIX_TO_OBJ(env, mat, object) \
-  if (!MatrixToObject(env, mat, object)) return NULL;
-#define MATRIX_TO_OBJ_RETVAL(env, mat, object, retval) \
-  if (!MatrixToObject(env, mat, object)) return retval;
-static napi_value MatrixToObject(napi_env env, matrix* mat, napi_value* object){
+#define MATRIX_TO_NAPI(env, mat, object) \
+  if (!MatrixToNapi(env, mat, object)) return NULL;
+#define MATRIX_TO_NAPI_RETVAL(env, mat, object, retval) \
+  if (!MatrixToNapi(env, mat, object)) return retval;
+static napi_value MatrixToNapi(napi_env env, matrix* mat, napi_value* object){
     NAPI_CALL(env, napi_create_object(env, object));
     
     napi_value rows;
@@ -83,7 +83,7 @@ static matrix NapiToMatrix(napi_env env, napi_value* object, matrix* mat){
   if (!CreateMatrix(env, rows, cols, result)) return retval;
 static napi_value CreateMatrix(napi_env env, int* rows, int* cols, napi_value* result){
   matrix mat = make_matrix(*rows, *cols);
-  MATRIX_TO_OBJ_RETVAL(env, &mat, result, NULL);
+  MATRIX_TO_NAPI(env, &mat, result);
   free_matrix(mat);
   return *result;
 }

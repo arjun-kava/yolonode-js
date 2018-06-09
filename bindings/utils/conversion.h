@@ -76,13 +76,25 @@ inline float NapiTofloat(napi_env env, napi_value* source, float* result){
 */
 #define CHAR_TO_NAPI(env, source, result) CharToNapi(env, source, result);
 #define CHAR_TO_NAPI_RETVAL(env, source, result, retval) \
-  if (CharToNapi(env, source, result)) return retval;
+  CharToNapi(env, source, result) \
+  return retval;
 inline napi_value CharToNapi(napi_env env,const char* source, napi_value* target) {
   size_t length= strlen(source);
   NAPI_CALL(env, napi_create_string_utf8(env, source, length, target));
   return *target;
 }
 
+/**
+* @description: convert napi string to char* array
+*/
+#define NAPI_TO_CHAR(env, source, target, length) NapiToChar(env, source, target, length);
+#define NAPI_TO_CHAR_RETVAL(env, source, target, length, retval) \
+  NapiToChar(env, source, target, length) \
+  return retval;
+inline char NapiToChar(napi_env env,napi_value* source,char* target, size_t *length){
+    NAPI_CALL(env, napi_get_value_string_utf8(env, *source, target, *length, NULL));
+    return *target;
+}
 
 
 /**

@@ -24,6 +24,22 @@ inline bool BindNapiFunction(napi_env env,napi_value exports,napi_callback fn,co
 }
 
 /**
+* @description: get length of napi string
+* @param source: <*napi_value>
+* @param length: <*size_t> 
+* @return <size_t>
+*/
+#define GET_NAPI_STRING_LEN(env, source, length) GetNapiStringLen(env, source, length);
+#define GET_NAPI_STRING_LEN_RETVAL(env, source, length, retval) \
+  GetNapiStringLen(env, source, length) \
+  return retval;
+inline size_t GetNapiStringLen(napi_env env, napi_value* source, size_t* length){
+  NAPI_CALL(env, napi_get_value_string_utf8(env, *source, NULL, 0, length));
+  *length += 1;
+  return *length;
+}
+
+/**
 * convert float array to js array
 * @param env: <napi_env> 
 * @param source: <*float> 
