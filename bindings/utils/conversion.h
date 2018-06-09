@@ -60,13 +60,15 @@ inline napi_value FloatToNapi(napi_env env, float* value, napi_value* result){
 * @param source: {*napi_value} 
 * @param result: {*float} 
 */
-#define NAPI_TO_FLOAT(env, value, result) NapiTofloat(env, source, result);
+#define NAPI_TO_FLOAT(env, source, result) NapiTofloat(env, source, result);
 #define NAPI_TO_FLOAT_RETVAL(env, source, result, retval) \
   NapiTofloat(env, source, result) \
   return retval;
 inline float NapiTofloat(napi_env env, napi_value* source, float* result){
-   NAPI_CALL(env, napi_create_int64(env, (double)*result, source));
-   return *result;
+  int64_t value;
+  NAPI_CALL(env, napi_get_value_int64(env, *source, &value));
+  *result = value;
+  return *result;
 }
 
 /**
@@ -108,7 +110,7 @@ inline std::string size_tTostring(size_t* source, std::string* result){
   return retval;
 inline static napi_value FloatMArrayToNapi(napi_env env,float** source, int* rows,int* cols, napi_value* target){
     NAPI_CALL(env, napi_create_array(env, target));
-
+   
     for (int i=0; i<*rows; i++)
     {
         napi_value dimension;
@@ -152,8 +154,8 @@ inline static void NapiToFloatMArray(napi_env env,napi_value* source, float** ta
       napi_value col;
       NAPI_CALL(env, napi_get_element(env, row, j, &col));
       
-      int val;
-      NAPI_TO_INT(env, &col, &val);
+      float val;
+      NAPI_TO_FLOAT(env, &col, &val);
     
       target[i][j] = 0.0;
     }

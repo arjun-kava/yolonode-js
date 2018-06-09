@@ -7,6 +7,28 @@
 
 #define DEBUG 1
 
+#define NAPI_ASSERT_BASE(env, assertion, message, ret_val)               \
+  do {                                                                   \
+    if (!(assertion)) {                                                  \
+      napi_throw_error(                                                  \
+          (env),                                                         \
+        NULL,                                                            \
+          "assertion (" #assertion ") failed: " message);                \
+      return ret_val;                                                    \
+    }                                                                    \
+  } while (0)
+
+// Returns NULL on failed assertion.
+// This is meant to be used inside napi_callback methods.
+#define NAPI_ASSERT(env, assertion, message)                             \
+  NAPI_ASSERT_BASE(env, assertion, message, NULL)
+
+// Returns empty on failed assertion.
+// This is meant to be used inside functions with void return type.
+#define NAPI_ASSERT_RETURN_VOID(env, assertion, message)                 \
+  NAPI_ASSERT_BASE(env, assertion, message, NAPI_RETVAL_NOTHING)
+
+
 #define NAPI_THROW_ERROR(env, message) \
   ThrowError(env, message, __FILE__, __LINE__);
 
