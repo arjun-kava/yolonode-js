@@ -63,4 +63,6 @@ typings/
 #build
 build
 
+# data
 bindings/examples
+src/data/backup/
