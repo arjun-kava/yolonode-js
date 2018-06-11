@@ -23,6 +23,8 @@ class Classifier{
         static napi_value New(napi_env env, napi_callback_info info);
         ~Classifier();
 
+        static napi_value Train(napi_env env, napi_callback_info info);
+
         static napi_value GetDataFilePath(napi_env env, napi_callback_info info);
         static napi_value SetDataFilePath(napi_env env, napi_callback_info info);
 
@@ -47,8 +49,11 @@ class Classifier{
         static napi_value GetTrainListPath(napi_env env, napi_callback_info info);
         static napi_value SetTrainListPath(napi_env env, napi_callback_info info);
 
-         static napi_value GetTestListPath(napi_env env, napi_callback_info info);
+        static napi_value GetTestListPath(napi_env env, napi_callback_info info);
         static napi_value SetTestListPath(napi_env env, napi_callback_info info);
+
+        static napi_value GetResultDirPath(napi_env env, napi_callback_info info);
+        static napi_value SetResultDirPath(napi_env env, napi_callback_info info);
 
 
         napi_env env_;
@@ -56,13 +61,14 @@ class Classifier{
 
         char* dataFilePath_;
         char* cfgFilePath_;
-        char* weighFilePath_;
-        int* gpus_;
+        char* weightFilePath_;
+        int gpus_;
         char* gpusList_;
         char* filePath_;
         char* labelsPath_;
         char* trainListPath_;
         char* testListPath_;
+        char* resultDirPath_;
 };
 
 

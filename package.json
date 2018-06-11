@@ -11,7 +11,7 @@
         "rebuild": "node-gyp rebuild",
         "clean": "node-gyp clean",
         "build-debug": "node-gyp rebuild --debug",
-        "test": "mocha --recursive ./src/test"
+        "test": "mocha --recursive --timeout 15000 ./src/test"
     },
     "repository": {
         "type": "git",

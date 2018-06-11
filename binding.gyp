@@ -29,7 +29,6 @@
             ],
             "cflags" : [
     			"-std=c++11",
-                #"-std=c99",
                 "-Wall",
                 "-Werror",
                 "-pedantic",

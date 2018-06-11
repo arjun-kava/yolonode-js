@@ -2,9 +2,21 @@
 #define CAFFE_NODEJS_UTIL_HELPER_H_
 
 #include <node_api.h>
+#include <sys/stat.h>
+#include <sys/sysinfo.h>
+using namespace std;
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 
+#define DECLARE_NAPI_PROPERTY(name, func) \
+  { (name), 0, (func), 0, 0, 0, napi_default, 0 }
+
+#define DECLARE_NAPI_GETTER(name, func) \
+  { (name), 0, 0, (func), 0, 0, napi_default, 0 }
+#define DECLARE_NAPI_SETTER(name, func) \
+  { (name), 0, 0, 0, (func), 0, napi_default, 0 }
+#define DECLARE_NAPI_GET_SET(name, getter, setter) \
+  { (name), 0, 0, (getter), (setter), 0, napi_default, 0 }
 /**
 * @desc: bind function to export container
 * @param env
@@ -60,16 +72,39 @@ static napi_value FloatArrayToNapi(napi_env env,float* source, napi_value* targe
     return *target;
 }
 
+/**
+* @description: check file exists
+* @param path: <napi_string>
+*/
+#define EXISTS(env, path) exists(env, path);
+#define EXISTS_RETVAL(env, source, target, retval) \
+  exists(env, path); \
+  return retval;
+inline bool exists(napi_env env, const char* path) {
+  struct stat buffer;   
+  bool exists = (stat (path, &buffer) == 0);
+  if(!exists){
+    NAPI_THROW_ERROR(env,"File/Dir does not exists!");
+    return false;
+  }
+  else 
+  {
+    return true;
+  }
+}
 
-#define DECLARE_NAPI_PROPERTY(name, func) \
-  { (name), 0, (func), 0, 0, 0, napi_default, 0 }
 
-#define DECLARE_NAPI_GETTER(name, func) \
-  { (name), 0, 0, (func), 0, 0, napi_default, 0 }
-#define DECLARE_NAPI_SETTER(name, func) \
-  { (name), 0, 0, 0, (func), 0, napi_default, 0 }
-#define DECLARE_NAPI_GET_SET(name, getter, setter) \
-  { (name), 0, 0, (getter), (setter), 0, napi_default, 0 }
+/**
+* @description: get number of threads
+*/
+static inline unsigned int  GetNumOfThreads(){
+  /*printf("This system has %d processors configured and "
+        "%d processors available.\n",
+        get_nprocs_conf(), get_nprocs());*/
+  return get_nprocs();
+}
+
+
 
 #endif // CAFFE_NODEJS_UTIL_HELPER_H_
 
