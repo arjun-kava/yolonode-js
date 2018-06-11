@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 
-#define DEBUG 1
+#define DEBUG 0
 
 #define NAPI_ASSERT_BASE(env, assertion, message, ret_val)               \
   do {                                                                   \
@@ -14,7 +14,6 @@
           (env),                                                         \
         NULL,                                                            \
           "assertion (" #assertion ") failed: " message);                \
-      return ret_val;                                                    \
     }                                                                    \
   } while (0)
 
