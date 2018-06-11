@@ -5,19 +5,19 @@
 #include "debug.h"
 
 
-#define IS_CONSTRUCTOR(env, info) \
-  if (!IsConstructor(env, info, __FILE__, __LINE__)) return true;
-
-#define IS_CONSTRUCTOR_RETVAL(env, info, retval) \
-  if (!IsConstructor(env, info, __FILE__, __LINE__)) return retval;
-
 /**
- * @desc: validate valid call of constructor
+ * @description: validate valid call of constructor
+ * @param env: <napi_env>
+ * @param env: <*napi_callback_info>
  **/
-inline bool IsConstructor(napi_env env, napi_callback_info info,
-                          const char* file, const size_t lineNumber) {
+#define IS_CONSTRUCTOR(env, info) \
+  IsConstructor(env, info);
+#define IS_CONSTRUCTOR_RETVAL(env, info, retval) \
+  IsConstructor(env, info); \
+  return retval;
+inline bool IsConstructor(napi_env env, napi_callback_info* info) {
   napi_value target;
-  NAPI_CALL(env, napi_get_new_target(env, info, &target));
+  NAPI_CALL(env, napi_get_new_target(env, *info, &target));
   bool is_target = target != NULL;
   if (!is_target) {
       NAPI_THROW_ERROR(env, "Invalid Constructor Call!")
@@ -25,19 +25,19 @@ inline bool IsConstructor(napi_env env, napi_callback_info info,
   return is_target;
 }
 
-#define IS_VALID_NUM_ARG(env, argc, numOfArg) \
-  if (!IsValidNumberOfArg(env, argc, numOfArg, __FILE__, __LINE__)) return true;
 
-#define IS_VALID_NUM_ARG_RETVAL(env, argc, numOfArg, retval) \
-  if (!IsValidNumberOfArg(env, argc, numOfArg, __FILE__, __LINE__)) return retval;
 
 /**
 * @desc: check valid number of argument
 * @param argc: <size_t>
 * @params numOfArg
 **/
-inline bool IsValidNumberOfArg(napi_env env, size_t* argc, int numOfArg,
-                                  const char* file, const size_t lineNumber){
+#define IS_VALID_NUM_ARG(env, argc, numOfArg) \
+  IsValidNumberOfArg(env, argc, numOfArg);
+#define IS_VALID_NUM_ARG_RETVAL(env, argc, numOfArg, retval) \
+  IsValidNumberOfArg(env, argc, numOfArg); \
+  return retval;
+inline bool IsValidNumberOfArg(napi_env env, size_t* argc, int numOfArg){
   if(*argc == 0 || *argc >= numOfArg){
     NAPI_THROW_ERROR(env, "Invalid Number of arguments!");
     return false;
@@ -125,7 +125,7 @@ inline bool IsArray(napi_env env, napi_value array){
 * @parma env: <napi_env>
 * @parma object: <napi_value>
 */
-#define IS_OBJECT(env, object) IsObject(env, object);;
+#define IS_OBJECT(env, object) IsObject(env, object);
 #define IS_OBJECT_RETVALUE(env, object, retvalue) \
     IsObject(env, object) \
     return retvalue;

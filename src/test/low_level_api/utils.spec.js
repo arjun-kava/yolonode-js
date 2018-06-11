@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const path = require('path');
 const fs = require('fs');
-const yoloNodeJs = require('../yolonode');
+const yoloNodeJs = require('../../yolonode');
 
 describe('Utils', () => {
     it('should call what_time_is_it_now() function', () => {

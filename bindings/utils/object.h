@@ -62,8 +62,23 @@ static napi_value SetProperty(napi_env env, napi_value* object,const char* key, 
     }
 }
 
+/**
+* @description: bind this from request
+* @param env: <napi_env>
+* @param info: <napi_callbacl_info>
+* @param _this: <napi_value>
+*/
+#define BIND_THIS(env, info, _this, argc, args) BindThis(env, info, _this, argc, args);
+#define BIND_THIS_RETVAL(env, info, _this, argc, args, retval) \
+  BindThis(env, info, _this, argc, args) \
+  return retval;
+inline static napi_value BindThis(napi_env env,napi_callback_info* info,
+   napi_value* _this, size_t* argc = nullptr, napi_value* args = nullptr){
+   //NAPI_CALL(env,
+   //   napi_get_cb_info(env, *info, argc, *args, _this, nullptr));
+      return *_this;
+}
 
 
-
-#endif // CAFFE_NODEJS_UTIL_OBJECT_H_
+#endif //CAFFE_NODEJS_UTIL_OBJECT_H_
 

@@ -9,6 +9,10 @@
             ],
             "target_name": "yolonodejs",
             "sources": [
+                "bindings/yolo_high_level_api/napi_classifier.h",
+                "bindings/yolo_high_level_api/napi_classifier.cc",
+                "bindings/yolo_high_level_api/napi_factory.cc",
+                "bindings/yolo_high_level_api/binder.cc",
                 "bindings/yolonodejs.cc",
             ],
             'include_dirs': [
@@ -25,7 +29,10 @@
             ],
             "cflags" : [
     			"-std=c++11",
+                #"-std=c99",
                 "-Wall",
+                "-Werror",
+                "-pedantic",
                 "-Wfatal-errors",
                 "-fPIC",
                 "-Ofast"

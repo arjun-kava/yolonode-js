@@ -16,10 +16,10 @@
 #define BIND_NAPI_FUN_RETVAL(env, exports, fn, name, retval) \
   BindNapiFunction(env, exports, fn, name) \
   return retval;
-inline bool BindNapiFunction(napi_env env,napi_value exports,napi_callback fn,const char* name){
+inline bool BindNapiFunction(napi_env env,napi_value* exports,napi_callback fn,const char* name){
     napi_value fnRef;
     NAPI_CALL(env, napi_create_function(env, NULL, NAPI_AUTO_LENGTH, fn, NULL, &fnRef));
-    NAPI_CALL(env, napi_set_named_property(env, exports, name, fnRef));
+    NAPI_CALL(env, napi_set_named_property(env, *exports, name, fnRef));
     return true;
 }
 
@@ -61,7 +61,15 @@ static napi_value FloatArrayToNapi(napi_env env,float* source, napi_value* targe
 }
 
 
+#define DECLARE_NAPI_PROPERTY(name, func) \
+  { (name), 0, (func), 0, 0, 0, napi_default, 0 }
 
+#define DECLARE_NAPI_GETTER(name, func) \
+  { (name), 0, 0, (func), 0, 0, napi_default, 0 }
+#define DECLARE_NAPI_SETTER(name, func) \
+  { (name), 0, 0, 0, (func), 0, napi_default, 0 }
+#define DECLARE_NAPI_GET_SET(name, getter, setter) \
+  { (name), 0, 0, (getter), (setter), 0, napi_default, 0 }
 
 #endif // CAFFE_NODEJS_UTIL_HELPER_H_
 
