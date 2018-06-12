@@ -50,7 +50,7 @@ inline napi_value IntToNapi(napi_env env, int* value, napi_value* result){
   FloatToNapi(env, value, result) \
   return retval;
 inline napi_value FloatToNapi(napi_env env, float* value, napi_value* result){
-  NAPI_CALL(env, napi_create_int64(env, (int64_t)*value, result));
+  NAPI_CALL(env, napi_create_double(env, (double)*value, result));
   return *result;
 }
 
@@ -65,9 +65,9 @@ inline napi_value FloatToNapi(napi_env env, float* value, napi_value* result){
   NapiTofloat(env, source, result) \
   return retval;
 inline float NapiTofloat(napi_env env, napi_value* source, float* result){
-  int64_t value;
-  NAPI_CALL(env, napi_get_value_int64(env, *source, &value));
-  *result = value;
+  double value;
+  NAPI_CALL(env, napi_get_value_double(env, *source, &value));
+  *result = (float) value;
   return *result;
 }
 
