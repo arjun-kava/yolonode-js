@@ -25,6 +25,8 @@ class Classifier{
 
         static napi_value Train(napi_env env, napi_callback_info info);
         static napi_value Classify(napi_env env, napi_callback_info info);
+        static napi_value Predict(napi_env env, napi_callback_info info);
+        static napi_value Validate(napi_env env, napi_callback_info info);
         static napi_value LoadWeights(napi_env env, napi_callback_info info);
 
         static napi_value GetDataFilePath(napi_env env, napi_callback_info info);
@@ -66,6 +68,8 @@ class Classifier{
         static napi_value GetHierThresh(napi_env env, napi_callback_info info);
         static napi_value SetHierThresh(napi_env env, napi_callback_info info);
 
+        static napi_value GetOutputFilePath(napi_env env, napi_callback_info info);
+        static napi_value SetOutputFilePath(napi_env env, napi_callback_info info);
 
         napi_env env_;
         napi_ref wrapper_;

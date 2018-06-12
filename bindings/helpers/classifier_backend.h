@@ -4,11 +4,89 @@
 #include <node_api.h>
 extern "C" {
     #include "darknet.h"
-    #include "matrix.h"
 }
 #include "../utils/common.h"
 #include "../yolo_high_level_api/napi_classifier.h"
 using namespace std;
+
+/**
+* @description: convert detected boxes into napi array
+*/
+inline napi_value DetectionToNapi(napi_env env,image* im, detection *dets,
+    int nBoxes,char** labels,int classes, float thresh, napi_value *result){
+    NAPI_CALL(env, napi_create_array(env, result));
+    int arrayIndex = 0;
+    for(int i = 0; i < nBoxes; ++i){
+        char labelstr[4096] = {0};
+        int matchedClasses = -1;
+        printf("classes: %d", classes);
+        for(int j = 0; j < classes; ++j){
+            printf("prob: %f", dets[i].prob[j]);
+            if (dets[i].prob[j] > thresh){
+                if (matchedClasses < 0) {
+                    strcat(labelstr, labels[j]);
+                    matchedClasses = j;
+                } else {
+                    strcat(labelstr, ", ");
+                    strcat(labelstr, labels[j]);
+                }
+                printf("%s: %.0f%%\n", labels[j], dets[i].prob[j]*100);
+                box b = dets[i].bbox;
+                printf("x:%f, y:%f, w:%f, h:%f\n", b.x, b.y, b.w, b.h);
+
+                napi_value detection;
+                NAPI_CALL(env, napi_create_object(env, &detection));
+
+                napi_value label;
+                CHAR_TO_NAPI(env, labels[j], &label);
+                NAPI_CALL(env, napi_set_named_property(env, detection, "label", label));
+
+                napi_value napi_prob;
+                float prob = dets[i].prob[j];
+                FLOAT_TO_NAPI(env, &prob, &napi_prob);
+                NAPI_CALL(env, napi_set_named_property(env, detection, "prob", napi_prob));
+
+                napi_value box;
+                NAPI_CALL(env, napi_create_object(env, &box));
+
+                int left  = (b.x-b.w/2.)*im->w;
+                int right = (b.x+b.w/2.)*im->w;
+                int top   = (b.y-b.h/2.)*im->h;
+                int bot   = (b.y+b.h/2.)*im->h;
+
+                if(left < 0) left = 0;
+                if(right > im->w-1) right = im->w-1;
+                if(top < 0) top = 0;
+                if(bot > im->h-1) bot = im->h-1;
+
+
+                napi_value napi_left;
+                INT_TO_NAPI(env, &left, &napi_left);
+                NAPI_CALL(env, napi_set_named_property(env, box, "left", napi_left));
+
+                napi_value napi_right;
+                INT_TO_NAPI(env, &right, &napi_right);
+                NAPI_CALL(env, napi_set_named_property(env, box, "right", napi_right));
+
+                napi_value napi_top;
+                INT_TO_NAPI(env, &top, &napi_top);
+                NAPI_CALL(env, napi_set_named_property(env, box, "top", napi_top));
+
+                napi_value napi_bottom;
+                INT_TO_NAPI(env, &bot, &napi_bottom);
+                NAPI_CALL(env, napi_set_named_property(env, box, "bottom", napi_bottom));
+
+
+                NAPI_CALL(env, napi_set_named_property(env, detection, "box", box));
+
+                NAPI_CALL(env, napi_set_element(env, *result, arrayIndex, detection));
+                arrayIndex++;
+            }
+        }
+    }
+    return *result;
+}
+
 
 /**
 * @description: validate trainer 

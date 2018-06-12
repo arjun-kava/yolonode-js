@@ -9,17 +9,25 @@ const dataDir = `${rootDir}/../..`;
 const dataPaths = {
   trainDir: path.resolve(`${dataDir}/data/tiny/train`),
   testDir: path.resolve(`${dataDir}/data/tiny/test`),
+  compareDir: path.resolve(`${dataDir}/data/tiny/compare`),
+  outputDir: path.resolve(`${dataDir}/data/tiny/output`),
 
   // train
   dataFilePath: path.resolve(`${dataDir}/data/tiny/tiny.data`),
   cfgFilePath:  path.resolve(`${dataDir}/data/tiny/tiny.cfg`),
-  weightFilePath:  path.resolve(`${dataDir}/data/backup/tiny.weights`),
+  weightFilePath:  path.resolve(`${dataDir}/data/tiny/backup/tiny.weights`),
   filePath:  path.resolve(`${dataDir}/data/person.jpg`),
   labelsPath:  path.resolve(`${dataDir}/data/tiny/labels.txt`),
   trainListPath:  path.resolve(`${dataDir}/data/tiny/train.list`),
   testListPath:  path.resolve(`${dataDir}/data/tiny/test.list`),
-  resultDirPath:  path.resolve(`${dataDir}/data/backup`),
-  top: 5,
+  resultDirPath:  path.resolve(`${dataDir}/data/tiny/backup`),
+  top: 2,
+
+  // yolov3
+  yolov3CfgFilePath:  path.resolve(`${dataDir}/data/yolov3/yolov3.cfg`),
+  yolov3WeightFilePath:  path.resolve(`${dataDir}/data/yolov3/yolov3.weights`),
+  yolov3LabelsPath:  path.resolve(`${dataDir}/data/yolov3/yolov3.names`),
+
 }
 
 before( () =>{
@@ -165,30 +173,80 @@ describe('Classify', () => {
       expect(classifier.hierThresh).to.not.eql(undefined);
       expect(classifier.hierThresh).to.eql(hierThresh);
     })
+    
 
     it('should train classifier', () => {
       const classifier = yoloNodeJs.classifier();
-      classifier.weightFilePath = dataPaths.weightFilePath;
-      classifier.dataFilePath = dataPaths.dataFilePath;
+      if(fs.existsSync(dataPaths.weightFilePath)){
+        classifier.weightFilePath = dataPaths.weightFilePath;
+      }
+      classifier.dataFilePath =  dataPaths.dataFilePath;
       classifier.cfgFilePath = dataPaths.cfgFilePath;
       classifier.resultDirPath = dataPaths.resultDirPath;
       classifier.train();
+      
+      
     })
 
-    /*it('should classify image tiny', () => {
+    it('should validate network', () => {
       const classifier = yoloNodeJs.classifier();
       
       classifier.cfgFilePath = dataPaths.cfgFilePath;
-      classifier.weightFilePath = dataPaths.testWeightPath;
+      classifier.weightFilePath = dataPaths.weightFilePath;
+      classifier.labelsPath = dataPaths.labelsPath;
+      classifier.testListPath = dataPaths.testListPath;
+      
+      classifier.top = dataPaths.top;
+      classifier.loadWeights();
+      classifier.validate();
+    })
+
+    it('should classify image tiny', () => {
+      const classifier = yoloNodeJs.classifier();
+      
+      classifier.cfgFilePath = dataPaths.cfgFilePath;
+      classifier.weightFilePath = dataPaths.weightFilePath;
       classifier.labelsPath = dataPaths.labelsPath;
       
       classifier.top = dataPaths.top;
       classifier.loadWeights();
 
-      const testFiles = fs.readdirSync(dataPaths.testDir);
-      for(let i = 0; i< 10; i++){
-        classifier.filePath = path.resolve(dataPaths.testDir, testFiles[i]);
-        classifier.classify();
+      const compareFiles = fs.readdirSync(dataPaths.compareDir);
+      for(let i = 0; i< compareFiles.length; i++){
+        const file = compareFiles[i];
+        const filePath = path.resolve(dataPaths.compareDir, file);
+        classifier.filePath = filePath;
+        classifier.outputFilePath = path.resolve(dataPaths.outputDir, file);
+        classifier.predict();
+        const detections = classifier.classify();
+        expect(detections).to.be.an("array");
       }
+    })
+
+    /*it('should predict and clasify by yolo3', () => {
+      const classifier = yoloNodeJs.classifier();
+      
+      classifier.cfgFilePath = dataPaths.yolov3CfgFilePath;
+      classifier.weightFilePath = dataPaths.yolov3WeightFilePath;
+      classifier.labelsPath = dataPaths.yolov3LabelsPath;
+      
+      classifier.top = 1;
+      classifier.thresh = 0.5;
+      classifier.hierThresh = 0.5;
+      classifier.filePath = dataPaths.filePath;
+      classifier.loadWeights();
+      const detections = classifier.classify();
+      expect(detections).to.be.an("array");
+      detections.forEach(detection => {
+          expect(detection).to.be.have.property("label");
+          expect(detection).to.be.have.property("prob");
+          expect(detection).to.be.have.property("box");
+          expect(detection.box).to.be.have.property("left");
+          expect(detection.box).to.be.have.property("right");
+          expect(detection.box).to.be.have.property("top");
+          expect(detection.box).to.be.have.property("bottom");
+      });
     })*/
+
+    
 })

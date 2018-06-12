@@ -12,7 +12,10 @@ Classifier::Classifier() : env_(nullptr), wrapper_(nullptr) {
     this->trainListPath_ = 0;
     this->testListPath_ = 0;
     this->resultDirPath_ = 0;
-    this->top_ = 1; // predict top 1 class by default
+    this->outputFilePath_ = 0;
+    this->top_ = 2; // predict top 1 class by default
+    this->thresh_ = .0;
+    this->hierThresh_ = .0;
 }
 
 Classifier::~Classifier() {
@@ -41,6 +44,8 @@ napi_status Classifier::Init(napi_env env) {
 
         DECLARE_NAPI_PROPERTY("train", Train),
         DECLARE_NAPI_PROPERTY("classify", Classify),
+        DECLARE_NAPI_PROPERTY("predict", Predict),
+        DECLARE_NAPI_PROPERTY("validate", Validate),
         DECLARE_NAPI_PROPERTY("loadWeights", LoadWeights),
 
         // GETTER / SETTER
@@ -56,7 +61,8 @@ napi_status Classifier::Init(napi_env env) {
         DECLARE_NAPI_GET_SET("resultDirPath", GetResultDirPath, SetResultDirPath),
         DECLARE_NAPI_GET_SET("top", GetTop, SetTop),
         DECLARE_NAPI_GET_SET("thresh", GetThresh, SetThresh),
-        DECLARE_NAPI_GET_SET("hierThresh", GetHierThresh, SetHierThresh)
+        DECLARE_NAPI_GET_SET("hierThresh", GetHierThresh, SetHierThresh),
+        DECLARE_NAPI_GET_SET("outputFilePath", GetOutputFilePath, SetOutputFilePath)
     };
 
     napi_value cons;
@@ -249,7 +255,7 @@ napi_value Classifier::Train(napi_env env, napi_callback_info info){
         if(classifier->gpus_ == 1){
             loss = train_network(net, train);
         } else {
-            loss = train_networks(nets, classifier->gpu_, train, 4);
+            loss = train_networks(nets, classifier->gpus_, train, 4);
         }
 #else
         loss = train_network(net, train);
@@ -347,11 +353,7 @@ napi_value Classifier::Classify(napi_env env,napi_callback_info info){
     set_batch_network(net, 1);
     srand(2222222);
     char **names = get_labels(classifier->labelsPath_);
-    //list *options = read_data_cfg(datacfg);
-
-    //char *name_list = option_find_str(options, "names", 0);
-    //if(!name_list) name_list = option_find_str(options, "labels", "data/labels.list");
-    //if(top == 0) top = option_find_int(options, "top", 1);
+   
     int i, j;
     const int nsize = 8;
     image **alphabets = (image**)calloc(nsize, sizeof(image));
@@ -364,77 +366,162 @@ napi_value Classifier::Classify(napi_env env,napi_callback_info info){
         }
     }
     
-    float thresh = .0;
-    float hier_thresh = .0;
     double time;
     char buff[256];
     char *input = buff;
     float nms=.45;
-    while(1){
-        if(classifier->filePath_){
-            strncpy(input, classifier->filePath_, 256);
-        } 
-        image im = load_image_color(input,0,0);
-        image sized = letterbox_image(im, net->w, net->h);
-        //image sized = resize_image(im, net->w, net->h);
-        //image sized2 = resize_max(im, net->w);
-        //image sized = crop_image(sized2, -((net->w - sized2.w)/2), -((net->h - sized2.h)/2), net->w, net->h);
-        //resize_network(net, sized.w, sized.h);
-        layer l = net->layers[net->n-1];
+  
+    if(classifier->filePath_){
+        strncpy(input, classifier->filePath_, 256);
+    } 
+    image im = load_image_color(input,0,0);
+    image sized = letterbox_image(im, net->w, net->h);
+    layer l = net->layers[net->n-1];
 
 
-        float *X = sized.data;
-        time=what_time_is_it_now();
-        network_predict(net, X);
-        printf("%s: Predicted in %f seconds.\n", input, what_time_is_it_now()-time);
-        int nboxes = 0;
-        detection *dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes);
-        //printf("%d\n", nboxes);
-        //if (nms) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
-        if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
-        draw_detections(im, dets, nboxes, thresh, names, alphabets, l.classes);
-        free_detections(dets, nboxes);
-     
-        save_image(im, "predictions");
-#ifdef OPENCV
-            cvNamedWindow("predictions", CV_WINDOW_NORMAL); 
-            if(fullscreen){
-                cvSetWindowProperty("predictions", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
-            }
-            show_image(im, "predictions");
-            cvWaitKey(0);
-            cvDestroyAllWindows();
-#endif
-        
+    float *X = sized.data;
+    time=what_time_is_it_now();
+    network_predict(net, X);
+    printf("%s: Predicted in %f seconds.\n", input, what_time_is_it_now()-time);
+    int nboxes = 0;
+    detection *dets = get_network_boxes(net, im.w, im.h, classifier->thresh_, classifier->hierThresh_, 0, 1, &nboxes);
+    printf("nboxes: %d", nboxes);
 
-        free_image(im);
-        free_image(sized);
-        break;
-    }
+    if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
+    draw_detections(im, dets, nboxes, classifier->thresh_, names, alphabets, l.classes);
+
+    napi_value result;
+    DetectionToNapi(env,&im, dets, nboxes, names, l.classes, classifier->thresh_, &result);
+    free_detections(dets, nboxes);
+    
+    save_image(im, classifier->outputFilePath_ != 0 ? classifier->outputFilePath_ : "predictions");
+
+    free_image(im);
+    free_image(sized);
+   
+    return result;
+}
 
 
-    ///// OLD
+napi_value Classifier::Predict(napi_env env,napi_callback_info info){
+    napi_value _this;
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
 
+    //napi_value args[argc];
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, nullptr, &_this, nullptr));  
 
-    //image r = resize_min(im, 320);
-    //printf("%d %d\n", r.w, r.h);
-    //resize_network(net, r.w, r.h);
-    //printf("%d %d\n", r.w, r.h);
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
 
-    /*float *X = r.data;
+    network *net = classifier->net_;
+    set_batch_network(net, 1);
+    srand(2222222);
+
+    char *name_list = classifier->labelsPath_;
+   
+
+    int i = 0;
+    char **names = get_labels(name_list);
+ 
+    clock_t time;
+    int *indexes =(int*) calloc(classifier->top_, sizeof(int));
+    char buff[256];
+    char *input = buff;
+
+    strncpy(input, classifier->filePath_, 256);
+    
+    image im = load_image_color(input, 0, 0);
+    image r = letterbox_image(im, net->w, net->h);
+
+    float *X = r.data;
     time=clock();
     float *predictions = network_predict(net, X);
     if(net->hierarchy) hierarchy_predictions(predictions, net->outputs, net->hierarchy, 1, 1);
-    top_k(predictions, net->outputs, top, indexes);
+    top_k(predictions, net->outputs, classifier->top_, indexes);
     fprintf(stderr, "%s: Predicted in %f seconds.\n", input, sec(clock()-time));
-    for(i = 0; i < top; ++i){
+
+    for(i = 0; i < classifier->top_; ++i){
         int index = indexes[i];
         //if(net->hierarchy) printf("%d, %s: %f, parent: %s \n",index, names[index], predictions[index], (net->hierarchy->parent[index] >= 0) ? names[net->hierarchy->parent[index]] : "Root");
         //else printf("%s: %f\n",names[index], predictions[index]);
         printf("%5.2f%%: %s\n", predictions[index]*100, names[index]);
     }
+
     if(r.data != im.data) free_image(r);
-    free_image(im);*/
+    free_image(im);
+
+    return nullptr;
+}
+
+napi_value Classifier::Validate(napi_env env,napi_callback_info info){
+    LOG("in\n");
+    napi_value _this;
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    //napi_value args[argc];
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, nullptr, &_this, nullptr));  
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    LOG("unwrap\n");
+    network *net = classifier->net_;
+    
+    set_batch_network(net, 1);
+    srand(time(0));
+    LOG("set batch\n");
+    
+    char *label_list = classifier->labelsPath_;
+    printf("label_list: %s\n", label_list);
+    char *valid_list = classifier->testListPath_;
+    printf("valid_list: %s\n", label_list);
+    int classes = 2;
+    int topk = 2;
+
+    char **labels = get_labels(label_list);
+    printf("labels: %s\n", labels);
+    list *plist = get_paths(valid_list);
+
+    char **paths = (char **)list_to_array(plist);
+    int m = plist->size;
+    free_list(plist);
+
+    float avg_acc = 0;
+    float avg_topk = 0;
+    int *indexes =(int*) calloc(topk, sizeof(int));
+
+    for(int i = 0; i < m; ++i){
+        int classI = -1;
+        char *path = paths[i];
+        for(int j = 0; j < classes; ++j){
+            if(strstr(path, labels[j])){
+                classI = j;
+                break;
+            }
+        }
+        image im = load_image_color(paths[i], 0, 0);
+        image crop = center_crop_image(im, net->w, net->h);
+        //show_image(im, "orig");
+        //show_image(crop, "cropped");
+        //cvWaitKey(0);
+        float *pred = network_predict(net, crop.data);
+        if(net->hierarchy) hierarchy_predictions(pred, net->outputs, net->hierarchy, 1, 1);
+
+        free_image(im);
+        free_image(crop);
+        top_k(pred, classes, topk, indexes);
+
+        if(indexes[0] == classI) avg_acc += 1;
+        for(int j = 0; j < topk; ++j){
+            if(indexes[j] == classI) avg_topk += 1;
+        }
+
+        printf("%s, %d, %f, %f, \n", paths[i], classI, pred[0], pred[1]);
+        printf("%d: top 1: %f, top %d: %f\n", i, avg_acc/(i+1), topk, avg_topk/(i+1));
+    }
+   
     return nullptr;
 }
 
@@ -936,6 +1023,44 @@ napi_value Classifier::SetHierThresh(napi_env env, napi_callback_info info){
     NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
 
     NAPI_TO_FLOAT(env, &args[indexHierThresh], &classifier->hierThresh_);
+
+    return nullptr;
+}
+
+napi_value Classifier::GetOutputFilePath(napi_env env, napi_callback_info info){
+    napi_value _this;
+    
+    NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    napi_value dataFilePath;
+    CHAR_TO_NAPI(env, classifier->outputFilePath_, &dataFilePath);
+
+    return dataFilePath;
+}
+
+napi_value Classifier::SetOutputFilePath(napi_env env, napi_callback_info info){
+    napi_value _this;
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    napi_value args[argc];
+    IS_VALID_NUM_ARG(env, &argc, 2);
+
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, &_this, nullptr));  
+
+    int indexOutputFilePath = 0;
+    IS_STRING(env, &args[indexOutputFilePath]);
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    size_t length;
+    GET_NAPI_STRING_LEN(env, &args[indexOutputFilePath], &length);
+    classifier->outputFilePath_ = new char[length];
+    NAPI_TO_CHAR(env,&args[indexOutputFilePath], classifier->outputFilePath_, &length);
 
     return nullptr;
 }
