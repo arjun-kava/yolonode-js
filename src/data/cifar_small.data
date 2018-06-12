@@ -1,6 +1,0 @@
-classes=10
-train  = /home/arjunkava/Work/yolonode/yolonode-js/src/data/train.list
-valid  = /home/arjunkava/Work/yolonode/yolonode-js/src/data/test.list
-labels = /home/arjunkava/Work/yolonode/yolonode-js/src/data/labels.txt
-backup = /home/backup/
-top=2

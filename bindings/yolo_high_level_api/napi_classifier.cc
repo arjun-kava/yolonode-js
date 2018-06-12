@@ -12,6 +12,10 @@ Classifier::Classifier() : env_(nullptr), wrapper_(nullptr) {
     this->trainListPath_ = 0;
     this->testListPath_ = 0;
     this->resultDirPath_ = 0;
+    this->outputFilePath_ = 0;
+    this->top_ = 2; // predict top 1 class by default
+    this->thresh_ = .0;
+    this->hierThresh_ = .0;
 }
 
 Classifier::~Classifier() {
@@ -39,6 +43,10 @@ napi_status Classifier::Init(napi_env env) {
     napi_property_descriptor properties[] = {
 
         DECLARE_NAPI_PROPERTY("train", Train),
+        DECLARE_NAPI_PROPERTY("classify", Classify),
+        DECLARE_NAPI_PROPERTY("predict", Predict),
+        DECLARE_NAPI_PROPERTY("validate", Validate),
+        DECLARE_NAPI_PROPERTY("loadWeights", LoadWeights),
 
         // GETTER / SETTER
         DECLARE_NAPI_GET_SET("dataFilePath", GetDataFilePath, SetDataFilePath),
@@ -50,7 +58,11 @@ napi_status Classifier::Init(napi_env env) {
         DECLARE_NAPI_GET_SET("labelsPath", GetLabelsPath, SetLabelsPath),
         DECLARE_NAPI_GET_SET("trainListPath", GetTrainListPath, SetTrainListPath),
         DECLARE_NAPI_GET_SET("testListPath", GetTestListPath, SetTestListPath),
-        DECLARE_NAPI_GET_SET("resultDirPath", GetResultDirPath, SetResultDirPath)
+        DECLARE_NAPI_GET_SET("resultDirPath", GetResultDirPath, SetResultDirPath),
+        DECLARE_NAPI_GET_SET("top", GetTop, SetTop),
+        DECLARE_NAPI_GET_SET("thresh", GetThresh, SetThresh),
+        DECLARE_NAPI_GET_SET("hierThresh", GetHierThresh, SetHierThresh),
+        DECLARE_NAPI_GET_SET("outputFilePath", GetOutputFilePath, SetOutputFilePath)
     };
 
     napi_value cons;
@@ -91,7 +103,6 @@ napi_status Classifier::NewInstance(napi_env env, size_t argc, napi_value args[]
 }
 
 napi_value Classifier::Train(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::train()");
     napi_value _this;
     size_t argc;
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
@@ -107,17 +118,22 @@ napi_value Classifier::Train(napi_env env, napi_callback_info info){
     bool isCfgFile = classifier &&  classifier->cfgFilePath_ && classifier->cfgFilePath_ != nullptr;
     bool isResDir = classifier &&  classifier->resultDirPath_ && classifier->resultDirPath_ != nullptr;
     bool isGpu = classifier &&  classifier->gpus_ && classifier->gpus_ > 0;
+   
     if(!isDataFile){
         NAPI_THROW_ERROR(env, "DataFilePath is not set or valid!");
+        return nullptr;
     }
     if(!isCfgFile){
         NAPI_THROW_ERROR(env, "CfgFilePath is not set or valid!");
+        return nullptr;
     }
     if(!isResDir){
         NAPI_THROW_ERROR(env, "ResultFilePath is not set or valid!");
+        return nullptr;
     }
     if(!isGpu){
         NAPI_THROW_ERROR(env, "Gpu/Cpu is not set!");
+        return nullptr;
     }
 
       int clear = 0;
@@ -239,7 +255,7 @@ napi_value Classifier::Train(napi_env env, napi_callback_info info){
         if(classifier->gpus_ == 1){
             loss = train_network(net, train);
         } else {
-            loss = train_networks(nets, classifier->gpu_, train, 4);
+            loss = train_networks(nets, classifier->gpus_, train, 4);
         }
 #else
         loss = train_network(net, train);
@@ -275,13 +291,245 @@ napi_value Classifier::Train(napi_env env, napi_callback_info info){
     return nullptr;
 }
 
+napi_value Classifier::LoadWeights(napi_env env, napi_callback_info info){
+    napi_value _this;
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    //napi_value args[argc];
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, nullptr, &_this, nullptr));  
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    bool isCfgFile = classifier && classifier->cfgFilePath_ &&  classifier->cfgFilePath_ != 0;
+    bool isWeightFile = classifier && classifier->weightFilePath_ &&  classifier->weightFilePath_ != 0;
+    if(!isCfgFile){
+        NAPI_THROW_ERROR(env, "CfgFilePath is not set or valid!");
+        return nullptr;
+    }
+    if(!isWeightFile){
+        NAPI_THROW_ERROR(env, "WeightFilePath is not set or valid!");
+        return nullptr;
+    }
+
+    classifier->net_ = load_network(classifier->cfgFilePath_, classifier->weightFilePath_, 0);
+    set_batch_network(classifier->net_, 1);
+
+    return nullptr;
+}
+
+napi_value Classifier::Classify(napi_env env,napi_callback_info info){
+    napi_value _this;
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    //napi_value args[argc];
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, nullptr, &_this, nullptr));  
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    
+    bool isTop = classifier &&  classifier->top_ && classifier->top_ > 0;
+    bool isLabelFile = classifier &&  classifier->labelsPath_ && classifier->labelsPath_ != 0;
+    bool isfilePath = classifier &&  classifier->filePath_ && classifier->filePath_ != 0;
+
+    
+    if(!isTop){
+        NAPI_THROW_ERROR(env, "Top is not set or valid!");
+        return nullptr;
+    }
+    if(!isLabelFile){
+        NAPI_THROW_ERROR(env, "Label File Path is not set or valid!");
+        return nullptr;
+    }
+    if(!isfilePath){
+        NAPI_THROW_ERROR(env, "File Path is not set or valid!");
+        return nullptr;
+    }
+
+    network *net = classifier->net_;
+    set_batch_network(net, 1);
+    srand(2222222);
+    char **names = get_labels(classifier->labelsPath_);
+   
+    int i, j;
+    const int nsize = 8;
+    image **alphabets = (image**)calloc(nsize, sizeof(image));
+    for(j = 0; j < nsize; ++j){
+        alphabets[j] =(image*) calloc(128, sizeof(image));
+        for(i = 32; i < 127; ++i){
+            char buff[256];
+            sprintf(buff, "/home/arjunkava/Work/yolonode/yolonode-js/src/data/labels/%d_%d.png", i, j);
+            alphabets[j][i] = load_image_color(buff, 0, 0);
+        }
+    }
+    
+    double time;
+    char buff[256];
+    char *input = buff;
+    float nms=.45;
+  
+    if(classifier->filePath_){
+        strncpy(input, classifier->filePath_, 256);
+    } 
+    image im = load_image_color(input,0,0);
+    image sized = letterbox_image(im, net->w, net->h);
+    layer l = net->layers[net->n-1];
+
+
+    float *X = sized.data;
+    time=what_time_is_it_now();
+    network_predict(net, X);
+    printf("%s: Predicted in %f seconds.\n", input, what_time_is_it_now()-time);
+    int nboxes = 0;
+    detection *dets = get_network_boxes(net, im.w, im.h, classifier->thresh_, classifier->hierThresh_, 0, 1, &nboxes);
+    printf("nboxes: %d", nboxes);
+
+    if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
+    draw_detections(im, dets, nboxes, classifier->thresh_, names, alphabets, l.classes);
+
+    napi_value result;
+    DetectionToNapi(env,&im, dets, nboxes, names, l.classes, classifier->thresh_, &result);
+    free_detections(dets, nboxes);
+    
+    save_image(im, classifier->outputFilePath_ != 0 ? classifier->outputFilePath_ : "predictions");
+
+    free_image(im);
+    free_image(sized);
+   
+    return result;
+}
+
+
+napi_value Classifier::Predict(napi_env env,napi_callback_info info){
+    napi_value _this;
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    //napi_value args[argc];
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, nullptr, &_this, nullptr));  
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    network *net = classifier->net_;
+    set_batch_network(net, 1);
+    srand(2222222);
+
+    char *name_list = classifier->labelsPath_;
+   
+
+    int i = 0;
+    char **names = get_labels(name_list);
+ 
+    clock_t time;
+    int *indexes =(int*) calloc(classifier->top_, sizeof(int));
+    char buff[256];
+    char *input = buff;
+
+    strncpy(input, classifier->filePath_, 256);
+    
+    image im = load_image_color(input, 0, 0);
+    image r = letterbox_image(im, net->w, net->h);
+
+    float *X = r.data;
+    time=clock();
+    float *predictions = network_predict(net, X);
+    if(net->hierarchy) hierarchy_predictions(predictions, net->outputs, net->hierarchy, 1, 1);
+    top_k(predictions, net->outputs, classifier->top_, indexes);
+    fprintf(stderr, "%s: Predicted in %f seconds.\n", input, sec(clock()-time));
+
+    for(i = 0; i < classifier->top_; ++i){
+        int index = indexes[i];
+        //if(net->hierarchy) printf("%d, %s: %f, parent: %s \n",index, names[index], predictions[index], (net->hierarchy->parent[index] >= 0) ? names[net->hierarchy->parent[index]] : "Root");
+        //else printf("%s: %f\n",names[index], predictions[index]);
+        printf("%5.2f%%: %s\n", predictions[index]*100, names[index]);
+    }
+
+    if(r.data != im.data) free_image(r);
+    free_image(im);
+
+    return nullptr;
+}
+
+napi_value Classifier::Validate(napi_env env,napi_callback_info info){
+    LOG("in\n");
+    napi_value _this;
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    //napi_value args[argc];
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, nullptr, &_this, nullptr));  
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    LOG("unwrap\n");
+    network *net = classifier->net_;
+    
+    set_batch_network(net, 1);
+    srand(time(0));
+    LOG("set batch\n");
+    
+    char *label_list = classifier->labelsPath_;
+    printf("label_list: %s\n", label_list);
+    char *valid_list = classifier->testListPath_;
+    printf("valid_list: %s\n", label_list);
+    int classes = 2;
+    int topk = 2;
+
+    char **labels = get_labels(label_list);
+    printf("labels: %s\n", labels);
+    list *plist = get_paths(valid_list);
+
+    char **paths = (char **)list_to_array(plist);
+    int m = plist->size;
+    free_list(plist);
+
+    float avg_acc = 0;
+    float avg_topk = 0;
+    int *indexes =(int*) calloc(topk, sizeof(int));
+
+    for(int i = 0; i < m; ++i){
+        int classI = -1;
+        char *path = paths[i];
+        for(int j = 0; j < classes; ++j){
+            if(strstr(path, labels[j])){
+                classI = j;
+                break;
+            }
+        }
+        image im = load_image_color(paths[i], 0, 0);
+        image crop = center_crop_image(im, net->w, net->h);
+        //show_image(im, "orig");
+        //show_image(crop, "cropped");
+        //cvWaitKey(0);
+        float *pred = network_predict(net, crop.data);
+        if(net->hierarchy) hierarchy_predictions(pred, net->outputs, net->hierarchy, 1, 1);
+
+        free_image(im);
+        free_image(crop);
+        top_k(pred, classes, topk, indexes);
+
+        if(indexes[0] == classI) avg_acc += 1;
+        for(int j = 0; j < topk; ++j){
+            if(indexes[j] == classI) avg_topk += 1;
+        }
+
+        printf("%s, %d, %f, %f, \n", paths[i], classI, pred[0], pred[1]);
+        printf("%d: top 1: %f, top %d: %f\n", i, avg_acc/(i+1), topk, avg_topk/(i+1));
+    }
+   
+    return nullptr;
+}
 
 /************************************
 * GETTER & SETTER
 *************************************/
 
 napi_value Classifier::GetDataFilePath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::GetDataFilePath()");
     napi_value _this;
     
     NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
@@ -296,7 +544,6 @@ napi_value Classifier::GetDataFilePath(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::SetDataFilePath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::SetDataFilePath()");
     napi_value _this;
     size_t argc;
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
@@ -323,7 +570,6 @@ napi_value Classifier::SetDataFilePath(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::GetCfgFilePath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::GetCfgFilePath()");
     napi_value _this;
     
     NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
@@ -338,7 +584,6 @@ napi_value Classifier::GetCfgFilePath(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::SetCfgFilePath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::SetCfgFilePath()");
     napi_value _this;
     size_t argc;
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
@@ -365,7 +610,6 @@ napi_value Classifier::SetCfgFilePath(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::GetWeightFilePath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::GetWeightFilePath()");
     napi_value _this;
     
     NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
@@ -380,7 +624,6 @@ napi_value Classifier::GetWeightFilePath(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::SetWeightFilePath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::SetWeightFilePath()");
     napi_value _this;
     size_t argc;
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
@@ -407,7 +650,6 @@ napi_value Classifier::SetWeightFilePath(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::GetGpu(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::GetGpu()");
     napi_value _this;
     
     NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
@@ -422,7 +664,6 @@ napi_value Classifier::GetGpu(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::SetGpu(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::SetGpu()");
     napi_value _this;
     size_t argc;
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
@@ -444,7 +685,6 @@ napi_value Classifier::SetGpu(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::GetGPUList(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::GetGPUList()");
     napi_value _this;
     
     NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
@@ -459,7 +699,6 @@ napi_value Classifier::GetGPUList(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::SetGPUList(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::SetGPUList()");
     napi_value _this;
     size_t argc;
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
@@ -484,7 +723,6 @@ napi_value Classifier::SetGPUList(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::GetFilePath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::GetFilePath()");
     napi_value _this;
     
     NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
@@ -499,7 +737,6 @@ napi_value Classifier::GetFilePath(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::SetFilePath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::SetGPUList()");
     napi_value _this;
     size_t argc;
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
@@ -526,7 +763,6 @@ napi_value Classifier::SetFilePath(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::GetLabelsPath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::GetLabelsPath()");
     napi_value _this;
     
     NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
@@ -541,7 +777,6 @@ napi_value Classifier::GetLabelsPath(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::SetLabelsPath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::SetLabelsPath()");
     napi_value _this;
     size_t argc;
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
@@ -568,7 +803,6 @@ napi_value Classifier::SetLabelsPath(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::GetTrainListPath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::GetTrainListPath()");
     napi_value _this;
     
     NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
@@ -583,7 +817,6 @@ napi_value Classifier::GetTrainListPath(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::SetTrainListPath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::SetTrainListPath()");
     napi_value _this;
     size_t argc;
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
@@ -610,7 +843,6 @@ napi_value Classifier::SetTrainListPath(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::GetTestListPath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::GetTestListPath()");
     napi_value _this;
     
     NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
@@ -625,7 +857,6 @@ napi_value Classifier::GetTestListPath(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::SetTestListPath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::SetTestListPath()");
     napi_value _this;
     size_t argc;
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
@@ -652,7 +883,6 @@ napi_value Classifier::SetTestListPath(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::GetResultDirPath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::GetResultDirPath()");
     napi_value _this;
     
     NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
@@ -667,7 +897,6 @@ napi_value Classifier::GetResultDirPath(napi_env env, napi_callback_info info){
 }
 
 napi_value Classifier::SetResultDirPath(napi_env env, napi_callback_info info){
-    LOG("calling Classifier::SetResultDirPath()");
     napi_value _this;
     size_t argc;
     NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
@@ -690,9 +919,150 @@ napi_value Classifier::SetResultDirPath(napi_env env, napi_callback_info info){
 
     EXISTS(env, classifier->resultDirPath_);
 
+    return nullptr;
+}
+
+napi_value Classifier::GetTop(napi_env env, napi_callback_info info){
+    napi_value _this;
+    
+    NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    napi_value top;
+    INT_TO_NAPI(env, &classifier->top_, &top);
+
+    return top;
+}
+
+napi_value Classifier::SetTop(napi_env env, napi_callback_info info){
+    napi_value _this;
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    napi_value args[argc];
+    IS_VALID_NUM_ARG(env, &argc, 2);
+
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, &_this, nullptr));  
+
+    int indexTop = 0;
+    IS_NUMBER(env, &args[indexTop]);
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    NAPI_TO_INT(env, &args[indexTop], &classifier->top_);
 
     return nullptr;
 }
 
+napi_value Classifier::GetThresh(napi_env env, napi_callback_info info){
+    napi_value _this;
+    
+    NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    napi_value thresh;
+    FLOAT_TO_NAPI(env, &classifier->thresh_, &thresh);
+
+    return thresh;
+}
+
+napi_value Classifier::SetThresh(napi_env env, napi_callback_info info){
+    napi_value _this;
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    napi_value args[argc];
+    IS_VALID_NUM_ARG(env, &argc, 2);
+
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, &_this, nullptr));  
+
+    int indexThresh = 0;
+    IS_NUMBER(env, &args[indexThresh]);
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    NAPI_TO_FLOAT(env, &args[indexThresh], &classifier->thresh_);
+
+    return nullptr;
+}
+
+napi_value Classifier::GetHierThresh(napi_env env, napi_callback_info info){
+    napi_value _this;
+    
+    NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    napi_value hierThresh;
+    FLOAT_TO_NAPI(env, &classifier->hierThresh_, &hierThresh);
+
+    return hierThresh;
+}
+
+napi_value Classifier::SetHierThresh(napi_env env, napi_callback_info info){
+    napi_value _this;
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    napi_value args[argc];
+    IS_VALID_NUM_ARG(env, &argc, 2);
+
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, &_this, nullptr));  
+
+    int indexHierThresh = 0;
+    IS_NUMBER(env, &args[indexHierThresh]);
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    NAPI_TO_FLOAT(env, &args[indexHierThresh], &classifier->hierThresh_);
+
+    return nullptr;
+}
+
+napi_value Classifier::GetOutputFilePath(napi_env env, napi_callback_info info){
+    napi_value _this;
+    
+    NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    napi_value dataFilePath;
+    CHAR_TO_NAPI(env, classifier->outputFilePath_, &dataFilePath);
+
+    return dataFilePath;
+}
+
+napi_value Classifier::SetOutputFilePath(napi_env env, napi_callback_info info){
+    napi_value _this;
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    napi_value args[argc];
+    IS_VALID_NUM_ARG(env, &argc, 2);
+
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, &_this, nullptr));  
+
+    int indexOutputFilePath = 0;
+    IS_STRING(env, &args[indexOutputFilePath]);
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    size_t length;
+    GET_NAPI_STRING_LEN(env, &args[indexOutputFilePath], &length);
+    classifier->outputFilePath_ = new char[length];
+    NAPI_TO_CHAR(env,&args[indexOutputFilePath], classifier->outputFilePath_, &length);
+
+    return nullptr;
+}
 
 

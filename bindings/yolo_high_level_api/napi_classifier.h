@@ -24,6 +24,10 @@ class Classifier{
         ~Classifier();
 
         static napi_value Train(napi_env env, napi_callback_info info);
+        static napi_value Classify(napi_env env, napi_callback_info info);
+        static napi_value Predict(napi_env env, napi_callback_info info);
+        static napi_value Validate(napi_env env, napi_callback_info info);
+        static napi_value LoadWeights(napi_env env, napi_callback_info info);
 
         static napi_value GetDataFilePath(napi_env env, napi_callback_info info);
         static napi_value SetDataFilePath(napi_env env, napi_callback_info info);
@@ -55,6 +59,17 @@ class Classifier{
         static napi_value GetResultDirPath(napi_env env, napi_callback_info info);
         static napi_value SetResultDirPath(napi_env env, napi_callback_info info);
 
+        static napi_value GetTop(napi_env env, napi_callback_info info);
+        static napi_value SetTop(napi_env env, napi_callback_info info);
+
+        static napi_value GetThresh(napi_env env, napi_callback_info info);
+        static napi_value SetThresh(napi_env env, napi_callback_info info);
+
+        static napi_value GetHierThresh(napi_env env, napi_callback_info info);
+        static napi_value SetHierThresh(napi_env env, napi_callback_info info);
+
+        static napi_value GetOutputFilePath(napi_env env, napi_callback_info info);
+        static napi_value SetOutputFilePath(napi_env env, napi_callback_info info);
 
         napi_env env_;
         napi_ref wrapper_;
@@ -69,6 +84,11 @@ class Classifier{
         char* trainListPath_;
         char* testListPath_;
         char* resultDirPath_;
+        char* outputFilePath_;
+        int top_;
+        float thresh_;
+        float hierThresh_;
+        network *net_;
 };
 
 
