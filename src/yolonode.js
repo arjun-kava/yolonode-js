@@ -1,2 +1,4 @@
 let yoloNodeJS = require('bindings')('yolonodejs');
-module.exports = yoloNodeJS;
+module.exports = {
+    'yolonode-js': yoloNodeJS
+};
