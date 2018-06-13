@@ -1,5 +1,5 @@
 classes= 2
-train  = /home/arjunkava/Work/yolonode/yolonode-js/src/data/tiny/train.list
-valid  = /home/arjunkava/Work/yolonode/yolonode-js/src/data/tiny/test.list
-labels = /home/arjunkava/Work/yolonode/yolonode-js/src/data/tiny/labels.txt
-backup = /home/arjunkava/Work/yolonode/yolonode-js/src/data/tiny/backup
+train  = /home/arjunkava/Work/yolonode/yolonode-js-cpu/src/data/tiny/train.list
+valid  = /home/arjunkava/Work/yolonode/yolonode-js-cpu/src/data/tiny/test.list
+labels = /home/arjunkava/Work/yolonode/yolonode-js-cpu/src/data/tiny/labels.txt
+backup = /home/arjunkava/Work/yolonode/yolonode-js-cpu/src/data/tiny/backup

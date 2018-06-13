@@ -66,3 +66,4 @@ build
 # data
 bindings/examples
 src/data/backup/
+src/data/tiny/backup
