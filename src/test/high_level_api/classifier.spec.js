@@ -15,7 +15,7 @@ const dataPaths = {
   // train
   dataFilePath: path.resolve(`${dataDir}/data/tiny/tiny.data`),
   cfgFilePath:  path.resolve(`${dataDir}/data/tiny/tiny.cfg`),
-  weightFilePath:  path.resolve(`${dataDir}/data/tiny/backup/tiny.weights`),
+  weightFilePath:  path.resolve(`${dataDir}/data/tiny/backup/tiny_2710.weights`),
   filePath:  path.resolve(`${dataDir}/data/person.jpg`),
   labelsPath:  path.resolve(`${dataDir}/data/tiny/labels.txt`),
   trainListPath:  path.resolve(`${dataDir}/data/tiny/train.list`),
@@ -175,7 +175,7 @@ describe('Classify', () => {
     })
     
 
-    it('should train classifier', () => {
+    it('should train with tiny(alexanet)', () => {
       const classifier = yoloNodeJs.classifier();
       if(fs.existsSync(dataPaths.weightFilePath)){
         classifier.weightFilePath = dataPaths.weightFilePath;
@@ -183,9 +183,7 @@ describe('Classify', () => {
       classifier.dataFilePath =  dataPaths.dataFilePath;
       classifier.cfgFilePath = dataPaths.cfgFilePath;
       classifier.resultDirPath = dataPaths.resultDirPath;
-      classifier.train();
-      
-      
+      //classifier.train();
     })
 
     it('should validate network', () => {

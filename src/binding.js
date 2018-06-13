@@ -44,6 +44,18 @@ const getCFlags = () => {
     console.log(flags.join(" "));
 }
 
+/**
+ * @description: getting defines needed
+ */
+const getDefines = () => {
+    const defines = [
+        "__cplusplus=1",
+        //`GPU=${isCPU()? "0": "1"}`,
+        //`LABELS_PATH "${yoloNodeJsBuild.yoloData}/labels"`
+    ]
+    console.log(defines.join(","));
+}
+
 const bindingArgIndex = 2;
 const isBindingArg = process.argv && process.argv.length == (bindingArgIndex + 1) && process.argv[bindingArgIndex];
 if(isBindingArg){
@@ -59,6 +71,9 @@ if(isBindingArg){
             break;
         case '--ldflags':
             getCFlags();
+            break;
+        case '--defines':
+            getDefines();
             break;
     }
 }

@@ -71,6 +71,10 @@ class Classifier{
         static napi_value GetOutputFilePath(napi_env env, napi_callback_info info);
         static napi_value SetOutputFilePath(napi_env env, napi_callback_info info);
 
+        static napi_value GetDataDirPath(napi_env env, napi_callback_info info);
+        static napi_value SetDataDirPath(napi_env env, napi_callback_info info);
+
+
         napi_env env_;
         napi_ref wrapper_;
 
@@ -85,6 +89,7 @@ class Classifier{
         char* testListPath_;
         char* resultDirPath_;
         char* outputFilePath_;
+        char* dataDirPath_;
         int top_;
         float thresh_;
         float hierThresh_;
