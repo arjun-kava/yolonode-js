@@ -15,7 +15,7 @@ const dataPaths = {
   // train
   dataFilePath: path.resolve(`${dataDir}/data/tiny/tiny.data`),
   cfgFilePath:  path.resolve(`${dataDir}/data/tiny/tiny.cfg`),
-  weightFilePath:  path.resolve(`${dataDir}/data/tiny/backup/tiny_2710.weights`),
+  weightFilePath:  path.resolve(`${dataDir}/data/tiny/backup/tiny_359.weights`),
   filePath:  path.resolve(`${dataDir}/data/person.jpg`),
   labelsPath:  path.resolve(`${dataDir}/data/tiny/labels.txt`),
   trainListPath:  path.resolve(`${dataDir}/data/tiny/train.list`),
