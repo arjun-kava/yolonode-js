@@ -96,12 +96,16 @@ inline bool exists(napi_env env, const char* path) {
 
 /**
 * @description: get number of threads
+* @reference GPU : https://devblogs.nvidia.com/how-query-device-properties-and-handle-errors-cuda-cc/
 */
 static inline unsigned int  GetNumOfThreads(){
-  /*printf("This system has %d processors configured and "
-        "%d processors available.\n",
-        get_nprocs_conf(), get_nprocs());*/
-  return get_nprocs();
+  #ifdef GPU
+    int nDevices;
+    cudaGetDeviceCount(&nDevices);
+    return nDevices;
+  #else
+    return get_nprocs();
+  #endif //GPU
 }
 
 

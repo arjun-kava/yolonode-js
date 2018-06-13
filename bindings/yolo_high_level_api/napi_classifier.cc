@@ -6,6 +6,7 @@ Classifier::Classifier() : env_(nullptr), wrapper_(nullptr) {
     this->cfgFilePath_ = 0;
     this->weightFilePath_ = 0;
     this->gpus_ = GetNumOfThreads() > 0 ? GetNumOfThreads(): 1;
+    printf("gpu: %d ",this->gpus_);
     this->gpusList_ = 0;
     this->filePath_ = 0;
     this->labelsPath_ = 0;
@@ -356,16 +357,6 @@ napi_value Classifier::Classify(napi_env env,napi_callback_info info){
    
     int i, j;
     const int nsize = 8;
-    image **alphabets = (image**)calloc(nsize, sizeof(image));
-    for(j = 0; j < nsize; ++j){
-        alphabets[j] =(image*) calloc(128, sizeof(image));
-        for(i = 32; i < 127; ++i){
-            char buff[256];
-            sprintf(buff, "/home/arjunkava/Work/yolonode/yolonode-js/src/data/labels/%d_%d.png", i, j);
-            alphabets[j][i] = load_image_color(buff, 0, 0);
-        }
-    }
-    
     double time;
     char buff[256];
     char *input = buff;
@@ -388,7 +379,6 @@ napi_value Classifier::Classify(napi_env env,napi_callback_info info){
     printf("nboxes: %d", nboxes);
 
     if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
-    draw_detections(im, dets, nboxes, classifier->thresh_, names, alphabets, l.classes);
 
     napi_value result;
     DetectionToNapi(env,&im, dets, nboxes, names, l.classes, classifier->thresh_, &result);
@@ -474,14 +464,12 @@ napi_value Classifier::Validate(napi_env env,napi_callback_info info){
     LOG("set batch\n");
     
     char *label_list = classifier->labelsPath_;
-    printf("label_list: %s\n", label_list);
+
     char *valid_list = classifier->testListPath_;
-    printf("valid_list: %s\n", label_list);
     int classes = 2;
     int topk = 2;
 
     char **labels = get_labels(label_list);
-    printf("labels: %s\n", labels);
     list *plist = get_paths(valid_list);
 
     char **paths = (char **)list_to_array(plist);
@@ -1061,6 +1049,46 @@ napi_value Classifier::SetOutputFilePath(napi_env env, napi_callback_info info){
     GET_NAPI_STRING_LEN(env, &args[indexOutputFilePath], &length);
     classifier->outputFilePath_ = new char[length];
     NAPI_TO_CHAR(env,&args[indexOutputFilePath], classifier->outputFilePath_, &length);
+
+    return nullptr;
+}
+
+napi_value Classifier::GetDataDirPath(napi_env env, napi_callback_info info){
+    napi_value _this;
+    
+    NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &_this, nullptr));
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    napi_value dataFilePath;
+    CHAR_TO_NAPI(env, classifier->dataDirPath_, &dataFilePath);
+
+    return dataFilePath;
+}
+
+napi_value Classifier::SetDataDirPath(napi_env env, napi_callback_info info){
+    napi_value _this;
+    size_t argc;
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, NULL, NULL, NULL));
+
+    napi_value args[argc];
+    IS_VALID_NUM_ARG(env, &argc, 2);
+
+    NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, &_this, nullptr));  
+
+    int indexDataDirPath = 0;
+    IS_STRING(env, &args[indexDataDirPath]);
+
+    Classifier* classifier;
+    NAPI_CALL(env, napi_unwrap(env, _this, reinterpret_cast<void**>(&classifier)));
+
+    size_t length;
+    GET_NAPI_STRING_LEN(env, &args[indexDataDirPath], &length);
+    classifier->dataDirPath_ = new char[length];
+    NAPI_TO_CHAR(env,&args[indexDataDirPath], classifier->dataDirPath_, &length);
+
+    EXISTS(env, classifier->dataDirPath_);
 
     return nullptr;
 }

@@ -5,7 +5,7 @@
     "targets": [
         {
             "defines":[
-                "__cplusplus=1"
+                "<!@(node ./src/binding.js --defines)"
             ],
             "target_name": "yolonodejs",
             "sources": [
