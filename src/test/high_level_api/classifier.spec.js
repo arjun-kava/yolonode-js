@@ -183,7 +183,7 @@ describe('Classify', () => {
       classifier.dataFilePath =  dataPaths.dataFilePath;
       classifier.cfgFilePath = dataPaths.cfgFilePath;
       classifier.resultDirPath = dataPaths.resultDirPath;
-      //classifier.train();
+      classifier.train();
     })
 
     it('should validate network', () => {
