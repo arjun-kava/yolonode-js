@@ -5,12 +5,16 @@ const yoloNodeJsBuild = require( isCPU() ? 'yolonode-js-build' : 'yolonode-js-bu
 // dirs to include
 const includeDirs = [
     yoloNodeJsBuild.yoloInclude,
-    yoloNodeJsBuild.yoloIncludeSrc
+    yoloNodeJsBuild.yoloIncludeSrc,
+    !isCPU() ? yoloNodeJsBuild.cudaInclude: "",
+    !isCPU() ? yoloNodeJsBuild.cudaTargetInclude: "",
 ]
 // dirs of libraries
 const libDirs = [
     yoloNodeJsBuild.yoloLibDir,
-    yoloNodeJsBuild.yoloBuildDir
+    yoloNodeJsBuild.yoloBuildDir,
+    !isCPU() ? yoloNodeJsBuild.cudaLib : "",
+    !isCPU() ? yoloNodeJsBuild.cudaTargetLib : "",
 ]
 
 /**
